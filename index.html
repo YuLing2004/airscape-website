@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Airscape</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Gruppo&family=Poppins:wght@300&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    font-family:'Poppins',sans-serif;
+    font-weight:300;
+    overflow-x:hidden;
+    color:#111;
+    background:#ffffff;
+    position:relative;
+}
+
+/* Ambient Sky */
+
+body::before{
+    content:"";
+    position:fixed;
+    inset:-20%;
+    z-index:-2;
+
+    background:
+        radial-gradient(
+            circle at 20% 30%,
+            rgba(180,220,255,0.55),
+            transparent 40%
+        ),
+        radial-gradient(
+            circle at 80% 40%,
+            rgba(255,210,240,0.45),
+            transparent 45%
+        ),
+        radial-gradient(
+            circle at 50% 80%,
+            rgba(220,240,255,0.35),
+            transparent 40%
+        );
+
+    animation:
+        ambientMove 28s ease-in-out infinite alternate;
+}
+
+body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:-1;
+
+    backdrop-filter:blur(120px);
+    -webkit-backdrop-filter:blur(120px);
+
+    pointer-events:none;
+}
+
+@keyframes ambientMove{
+
+    0%{
+        transform:
+        translate(-2%,-1%)
+        scale(1);
+    }
+
+    50%{
+        transform:
+        translate(3%,2%)
+        scale(1.08);
+    }
+
+    100%{
+        transform:
+        translate(-1%,4%)
+        scale(1.15);
+    }
+
+}
+
+/* Hero */
+
+.hero{
+
+    min-height:100vh;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+
+    padding-left:8vw;
+    padding-right:8vw;
+
+}
+
+.title{
+
+    font-family:'Gruppo',sans-serif;
+    font-weight:400;
+
+    font-size:clamp(4rem,9vw,8rem);
+
+    letter-spacing:0.08em;
+
+}
+
+.air-line{
+
+    width:220px;
+    height:1px;
+
+    margin-top:40px;
+    margin-bottom:70px;
+
+    background:
+    linear-gradient(
+        90deg,
+        transparent,
+        rgba(130,190,255,0.7),
+        rgba(255,180,220,0.7),
+        transparent
+    );
+
+    animation:
+    drift 8s ease-in-out infinite;
+}
+
+@keyframes drift{
+
+    0%{
+        transform:translateX(-20px);
+    }
+
+    50%{
+        transform:translateX(20px);
+    }
+
+    100%{
+        transform:translateX(-20px);
+    }
+
+}
+
+.description{
+
+    max-width:700px;
+
+    font-size:1rem;
+
+    line-height:1.5;
+
+}
+
+/* Video */
+
+.video-section{
+
+    width:100%;
+    padding:10vh 0 20vh;
+
+    display:flex;
+    justify-content:center;
+
+}
+
+.video-wrapper{
+
+    width:85vw;
+    max-width:1400px;
+
+}
+
+.video-wrapper video{
+
+    width:100%;
+    display:block;
+
+    border-radius:2px;
+
+}
+
+/* Gallery */
+
+.gallery{
+
+    width:100%;
+    padding-bottom:20vh;
+
+}
+
+.image-block{
+
+    width:100%;
+
+    display:flex;
+    justify-content:center;
+
+    margin:18vh 0;
+
+    opacity:0;
+
+    transform:
+    translateY(100px)
+    scale(0.98);
+
+    filter:blur(20px);
+
+    transition:
+        opacity 1.6s ease,
+        transform 1.6s ease,
+        filter 1.6s ease;
+
+}
+
+.image-block.visible{
+
+    opacity:1;
+
+    transform:
+    translateY(0)
+    scale(1);
+
+    filter:blur(0px);
+
+}
+
+.image-block img{
+
+    width:75vw;
+    max-width:1400px;
+
+    display:block;
+
+}
+
+/* Footer */
+
+.footer{
+
+    padding:15vh 0;
+
+    text-align:center;
+
+    font-size:0.75rem;
+
+    letter-spacing:0.15em;
+
+    opacity:0.6;
+
+}
+
+/* Responsive */
+
+@media(max-width:768px){
+
+    .hero{
+        min-height:90vh;
+    }
+
+    .description{
+        font-size:0.95rem;
+    }
+
+    .air-line{
+        width:140px;
+    }
+
+    .image-block img{
+        width:90vw;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- HERO -->
+
+<section class="hero">
+
+    <div class="title">
+        Airscape
+    </div>
+
+    <div class="air-line"></div>
+
+    <div class="description">
+        In many industrialized cities, air is constantly present yet rarely perceived until pollution crises occur.
+        AirScape addresses this sensory disconnection by designing with air and particles, translating seasonal and spatial airflow patterns alongside pollutants into embodied perception.
+        By rendering air perceptually and physically present, the project invites reflection on the intimate yet neglected relationship between the atmosphere and the human body.
+    </div>
+
+</section>
+
+<!-- VIDEO -->
+
+<section class="video-section">
+
+    <div class="video-wrapper">
+
+        <video
+            autoplay
+            muted
+            loop
+            playsinline>
+
+            <source src="materials/video.mp4" type="video/mp4">
+
+        </video>
+
+    </div>
+
+</section>
+
+<!-- IMAGES -->
+
+<section class="gallery">
+
+    <div class="image-block">
+        <img src="materials/image1.png" alt="">
+    </div>
+
+    <div class="image-block">
+        <img src="materials/image2.png" alt="">
+    </div>
+
+    <div class="image-block">
+        <img src="materials/image3.jpg" alt="">
+    </div>
+
+    <div class="image-block">
+        <img src="materials/image4.png" alt="">
+    </div>
+
+    <div class="image-block">
+        <img src="materials/image5.png" alt="">
+    </div>
+
+</section>
+
+<!-- FOOTER -->
+
+<section class="footer">
+    AIRSCAPE · 2026 · Work In Progress
+</section>
+
+<script>
+
+const observer = new IntersectionObserver(
+
+(entries)=>{
+
+    entries.forEach(entry=>{
+
+        if(entry.isIntersecting){
+
+            entry.target.classList.add('visible');
+
+        }
+
+    });
+
+},
+
+{
+    threshold:0.15
+}
+
+);
+
+document
+.querySelectorAll('.image-block')
+.forEach(el=>observer.observe(el));
+
+</script>
+
+</body>
+</html>
