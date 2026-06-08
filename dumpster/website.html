@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airscape Motion Mapping Interface</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f7f5;
+      --panel: #ffffff;
+      --ink: #111111;
+      --muted: #666666;
+      --line: #d8d8d4;
+      --soft-line: rgba(17, 17, 17, 0.14);
+      --particle: rgba(120, 126, 130, 0.38);
+      --particle-stroke: rgba(17, 17, 17, 0.2);
+      --track: rgba(17, 17, 17, 0.08);
+      --thumb: #111111;
+      --overlay: rgba(255, 255, 255, 0.84);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "IBM Plex Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
+      overflow: hidden;
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    button,
+    input,
+    label {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(320px, 40vw) 1fr;
+      min-height: 100vh;
+    }
+
+    .panel {
+      background: var(--panel);
+    }
+
+    .panel--controls {
+      border-right: 1px solid var(--line);
+      padding: 42px 34px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 36px;
+      overflow-y: auto;
+    }
+
+    .identity {
+      display: grid;
+      gap: 8px;
+    }
+
+    .identity__eyebrow {
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .identity h1,
+    .identity h2,
+    .identity p,
+    .metric__label,
+    .metric__value,
+    .footer-note,
+    .orbit-controls__title,
+    .orbit-controls__hint,
+    .orbit-controls__button {
+      margin: 0;
+      font-weight: 300;
+    }
+
+    .identity h1 {
+      font-size: clamp(2rem, 3.8vw, 3.35rem);
+      line-height: 0.94;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+
+    .identity h2 {
+      font-size: 0.88rem;
+      line-height: 1.8;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .metrics {
+      display: grid;
+      gap: 28px;
+      margin-top: auto;
+    }
+
+    .metric {
+      display: grid;
+      gap: 10px;
+    }
+
+    .metric__header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .metric__label {
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric__value {
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      min-width: 4ch;
+      text-align: right;
+    }
+
+    .metric input[type="range"] {
+      width: 100%;
+      margin: 0;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .metric input[type="range"]:focus {
+      outline: none;
+    }
+
+    .metric input[type="range"]::-webkit-slider-runnable-track {
+      height: 1px;
+      background: var(--track);
+      border-radius: 999px;
+    }
+
+    .metric input[type="range"]::-moz-range-track {
+      height: 1px;
+      background: var(--track);
+      border: 0;
+      border-radius: 999px;
+    }
+
+    .metric input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid var(--thumb);
+      background: #ffffff;
+      margin-top: -4.5px;
+    }
+
+    .metric input[type="range"]::-moz-range-thumb {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid var(--thumb);
+      background: #ffffff;
+    }
+
+    .footer-note {
+      font-size: 0.68rem;
+      line-height: 1.9;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-top: 8px;
+    }
+
+    .panel--visual {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 10%, rgba(17, 17, 17, 0.045), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 247, 245, 0.92));
+    }
+
+    .visual-shell {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    #sceneMount {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #sceneMount.is-dragging {
+      cursor: grabbing;
+    }
+
+    #sceneMount canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .scene-error {
+      position: absolute;
+      inset: 24px;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      border: 1px solid rgba(17, 17, 17, 0.08);
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--ink);
+      text-align: center;
+      line-height: 1.8;
+      letter-spacing: 0.06em;
+      backdrop-filter: blur(16px);
+      z-index: 2;
+    }
+
+    .scene-error.is-visible {
+      display: grid;
+    }
+
+    .scene-overlay {
+      position: absolute;
+      left: 28px;
+      right: 28px;
+      bottom: 24px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      pointer-events: none;
+    }
+
+    .scene-label {
+      color: rgba(17, 17, 17, 0.54);
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      max-width: 420px;
+    }
+
+    .orbit-controls {
+      min-width: min(320px, 100%);
+      max-width: 360px;
+      padding: 16px 18px 14px;
+      background: var(--overlay);
+      border: 1px solid rgba(17, 17, 17, 0.08);
+      backdrop-filter: blur(18px);
+      pointer-events: auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .orbit-controls__header {
+      display: grid;
+      gap: 6px;
+    }
+
+    .orbit-controls__title {
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .orbit-controls__hint {
+      font-size: 0.68rem;
+      line-height: 1.6;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .orbit-controls__grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .orbit-controls__button {
+      border: 1px solid rgba(17, 17, 17, 0.12);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      padding: 9px 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .orbit-controls__button:hover {
+      background: #ffffff;
+    }
+
+    @media (max-width: 980px) {
+      html,
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+
+      .panel--controls {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        min-height: 48vh;
+      }
+
+      .panel--visual {
+        min-height: 60vh;
+      }
+
+      .scene-overlay {
+        left: 18px;
+        right: 18px;
+        bottom: 18px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .orbit-controls {
+        max-width: none;
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .panel--controls {
+        padding: 28px 22px 24px;
+      }
+
+      .metrics {
+        gap: 22px;
+      }
+
+      .scene-label {
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel panel--controls" aria-label="Motion controls">
+      <header class="identity">
+        <p class="identity__eyebrow">Atmospheric Installation Interface</p>
+        <h1>AIRSCAPE</h1>
+        <h2>Motion Mapping Engine</h2>
+      </header>
+
+      <section class="metrics" id="controls"></section>
+
+      <p class="footer-note">
+        64 suspended particles across a 3D 9 × 9 ceiling field.<br />
+        Responsive atmospheric simulation driven by local interference, drag, and density.
+      </p>
+    </section>
+
+    <section class="panel panel--visual" aria-label="Realtime motion mapping field">
+      <div class="visual-shell">
+        <div id="sceneMount" role="img" aria-label="Interactive 3D air particle field visualization"></div>
+        <div class="scene-error" id="sceneError" aria-live="polite"></div>
+        <div class="scene-overlay">
+          <div class="scene-label">Suspended Atmospheric Motion Field / 8×8 Active Particles</div>
+          <section class="orbit-controls" aria-label="View controls">
+            <header class="orbit-controls__header">
+              <p class="orbit-controls__title">View Adjustment</p>
+              <p class="orbit-controls__hint">Drag in the scene to orbit. Fine tune yaw, tilt, and zoom here.</p>
+            </header>
+            <div class="orbit-controls__grid" id="cameraControls"></div>
+            <button class="orbit-controls__button" id="resetView" type="button">Reset View</button>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const GRID_POINTS = 9;
+    const PARTICLE_POINTS = 8;
+    const THREE_CDN = 'https://unpkg.com/three@0.166.1/build/three.min.js';
+
+    const parameters = [
+      { key: 'frequency', label: 'Frequency', min: 0, max: 100, step: 1, value: 38 },
+      { key: 'amplitude', label: 'Amplitude', min: 0, max: 100, step: 1, value: 44 },
+      { key: 'turbulence', label: 'Turbulence', min: 0, max: 100, step: 1, value: 26 },
+      { key: 'complexity', label: 'Complexity', min: 0, max: 100, step: 1, value: 54 },
+      { key: 'stagnation', label: 'Stagnation', min: 0, max: 100, step: 1, value: 22 },
+      { key: 'pollutionDensity', label: 'Pollution Density', min: 0, max: 100, step: 1, value: 31 }
+    ];
+
+    const cameraParameters = [
+      { key: 'yaw', label: 'Yaw', min: -180, max: 180, step: 1, value: 38, format: (value) => `${Math.round(value)}°` },
+      { key: 'tilt', label: 'Tilt', min: 18, max: 78, step: 1, value: 56, format: (value) => `${Math.round(value)}°` },
+      { key: 'zoom', label: 'Zoom', min: 640, max: 1580, step: 10, value: 980, format: (value) => String(Math.round(value)) }
+    ];
+
+    const defaultCameraState = Object.fromEntries(cameraParameters.map((item) => [item.key, item.value]));
+
+    const state = {
+      params: Object.fromEntries(parameters.map((item) => [item.key, item.value])),
+      camera: { ...defaultCameraState },
+      particles: [],
+      anchors: [],
+      frame: null,
+      lastTime: performance.now(),
+      time: 0,
+      scene: {
+        spacing: 62,
+        baseLine: 432,
+        heightMin: 80,
+        heightRange: 96,
+        particleRadius: 8,
+        mobileScale: 0.86
+      },
+      pointer: {
+        dragging: false,
+        active: false,
+        id: null,
+        startX: 0,
+        startY: 0,
+        startYaw: defaultCameraState.yaw,
+        startTilt: defaultCameraState.tilt
+      },
+      three: {
+        renderer: null,
+        scene: null,
+        camera: null,
+        grid: null,
+        anchorDots: null,
+        particleGroup: null,
+        supportGroup: null,
+        fog: null,
+        ambientLight: null,
+        keyLight: null,
+        fillLight: null,
+        target: null
+      }
+    };
+
+    const controlsRoot = document.getElementById('controls');
+    const cameraControlsRoot = document.getElementById('cameraControls');
+    const sceneMount = document.getElementById('sceneMount');
+    const sceneError = document.getElementById('sceneError');
+    const resetViewButton = document.getElementById('resetView');
+
+    function mapRange(value, inMin, inMax, outMin, outMax) {
+      return outMin + ((value - inMin) / (inMax - inMin)) * (outMax - outMin);
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function smoothstep(edge0, edge1, x) {
+      const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    function pseudoNoise(x, y, z) {
+      return (
+        Math.sin(x * 1.73 + z * 0.53) * 0.48 +
+        Math.sin(y * 1.11 - z * 0.41) * 0.32 +
+        Math.sin((x + y) * 0.37 + z * 0.21) * 0.2
+      );
+    }
+
+    function fieldInterference(row, col, time, complexity) {
+      const c = mapRange(complexity, 0, 100, 0.6, 2.4);
+      const a = Math.sin(row * 0.72 + time * 0.55 * c);
+      const b = Math.cos(col * 0.63 - time * 0.41 * (0.8 + c * 0.2));
+      const d = Math.sin((row + col) * 0.36 - time * 0.23 * c);
+      const e = Math.cos((row - col) * 0.48 + time * 0.31 * (1 + c));
+      return a * 0.34 + b * 0.26 + d * 0.22 + e * 0.18;
+    }
+
+    function densityWeight(row, col) {
+      const center = (PARTICLE_POINTS - 1) / 2;
+      const dx = row - center;
+      const dy = col - center;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return 1 - clamp(distance / 5.4, 0, 1);
+    }
+
+    function currentSceneScale() {
+      return window.innerWidth < 980 ? state.scene.mobileScale : 1;
+    }
+
+    function showSceneError(message) {
+      sceneError.textContent = message;
+      sceneError.classList.add('is-visible');
+    }
+
+    function clearSceneError() {
+      sceneError.textContent = '';
+      sceneError.classList.remove('is-visible');
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[data-src="${src}"]`);
+        if (existing) {
+          if (existing.dataset.loaded === 'true') {
+            resolve();
+            return;
+          }
+          existing.addEventListener('load', resolve, { once: true });
+          existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.src = src;
+        script.addEventListener('load', () => {
+          script.dataset.loaded = 'true';
+          resolve();
+        }, { once: true });
+        script.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        document.head.appendChild(script);
+      });
+    }
+
+    function buildMetricControl(root, parameter, initialValue, onInput, options = {}) {
+      const { valueIdPrefix = 'value' } = options;
+      const wrapper = document.createElement('label');
+      wrapper.className = 'metric';
+
+      const header = document.createElement('div');
+      header.className = 'metric__header';
+
+      const label = document.createElement('span');
+      label.className = 'metric__label';
+      label.textContent = parameter.label;
+
+      const value = document.createElement('span');
+      value.className = 'metric__value';
+      value.id = `${valueIdPrefix}-${parameter.key}`;
+      value.textContent = parameter.format ? parameter.format(initialValue) : String(initialValue).padStart(2, '0');
+
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = parameter.min;
+      input.max = parameter.max;
+      input.step = parameter.step;
+      input.value = initialValue;
+      input.name = parameter.key;
+      input.setAttribute('aria-label', parameter.label);
+
+      input.addEventListener('input', (event) => {
+        const nextValue = Number(event.target.value);
+        value.textContent = parameter.format ? parameter.format(nextValue) : String(nextValue).padStart(2, '0');
+        onInput(nextValue);
+      });
+
+      header.append(label, value);
+      wrapper.append(header, input);
+      root.appendChild(wrapper);
+    }
+
+    function buildControls() {
+      parameters.forEach((parameter) => {
+        buildMetricControl(controlsRoot, parameter, parameter.value, (nextValue) => {
+          state.params[parameter.key] = nextValue;
+        }, { valueIdPrefix: 'value' });
+      });
+    }
+
+    function buildCameraControls() {
+      cameraParameters.forEach((parameter) => {
+        buildMetricControl(cameraControlsRoot, parameter, parameter.value, (nextValue) => {
+          state.camera[parameter.key] = nextValue;
+          applyCameraFromState();
+        }, { valueIdPrefix: 'camera-value' });
+      });
+    }
+
+    function syncCameraUi() {
+      cameraParameters.forEach((parameter) => {
+        const input = cameraControlsRoot.querySelector(`input[name="${parameter.key}"]`);
+        const valueNode = document.getElementById(`camera-value-${parameter.key}`);
+        if (input) {
+          input.value = String(state.camera[parameter.key]);
+        }
+        if (valueNode) {
+          valueNode.textContent = parameter.format(state.camera[parameter.key]);
+        }
+      });
+    }
+
+    function gridToWorld(row, col) {
+      const THREE = window.THREE;
+      const spacing = state.scene.spacing * currentSceneScale();
+      const span = (GRID_POINTS - 1) * spacing;
+      const x = col * spacing - span / 2;
+      const z = row * spacing - span / 2;
+      return new THREE.Vector3(x, 0, z);
+    }
+
+    function particleAnchorWorld(row, col) {
+      return gridToWorld(row + 0.5, col + 0.5);
+    }
+
+    function createLine(points, material) {
+      const THREE = window.THREE;
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      return new THREE.Line(geometry, material);
+    }
+
+    function setupPointerControls() {
+      sceneMount.addEventListener('pointerdown', (event) => {
+        state.pointer.active = true;
+        state.pointer.dragging = false;
+        state.pointer.id = event.pointerId;
+        state.pointer.startX = event.clientX;
+        state.pointer.startY = event.clientY;
+        state.pointer.startYaw = state.camera.yaw;
+        state.pointer.startTilt = state.camera.tilt;
+        sceneMount.setPointerCapture(event.pointerId);
+      });
+
+      sceneMount.addEventListener('pointermove', (event) => {
+        if (!state.pointer.active || event.pointerId !== state.pointer.id) {
+          return;
+        }
+
+        const dx = event.clientX - state.pointer.startX;
+        const dy = event.clientY - state.pointer.startY;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+          state.pointer.dragging = true;
+          sceneMount.classList.add('is-dragging');
+        }
+
+        state.camera.yaw = state.pointer.startYaw - dx * 0.22;
+        state.camera.tilt = clamp(state.pointer.startTilt + dy * 0.16, cameraParameters[1].min, cameraParameters[1].max);
+        syncCameraUi();
+        applyCameraFromState();
+      });
+
+      function releasePointer(event) {
+        if (!state.pointer.active || event.pointerId !== state.pointer.id) {
+          return;
+        }
+
+        state.pointer.active = false;
+        state.pointer.dragging = false;
+        sceneMount.classList.remove('is-dragging');
+        sceneMount.releasePointerCapture(event.pointerId);
+      }
+
+      sceneMount.addEventListener('pointerup', releasePointer);
+      sceneMount.addEventListener('pointercancel', releasePointer);
+      sceneMount.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        state.camera.zoom = clamp(state.camera.zoom + event.deltaY * 0.5, cameraParameters[2].min, cameraParameters[2].max);
+        syncCameraUi();
+        applyCameraFromState();
+      }, { passive: false });
+    }
+
+    function setupThreeScene() {
+      const THREE = window.THREE;
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.08;
+
+      const scene = new THREE.Scene();
+      scene.background = null;
+      scene.fog = new THREE.Fog(0xf7f7f5, 680, 1780);
+
+      const camera = new THREE.PerspectiveCamera(34, 1, 1, 4000);
+      const target = new THREE.Vector3(0, -160, 0);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.15);
+      keyLight.position.set(260, 320, 200);
+      const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
+      fillLight.position.set(-240, 180, -180);
+
+      scene.add(ambientLight, keyLight, fillLight);
+
+      state.three.renderer = renderer;
+      state.three.scene = scene;
+      state.three.camera = camera;
+      state.three.target = target;
+      state.three.fog = scene.fog;
+      state.three.ambientLight = ambientLight;
+      state.three.keyLight = keyLight;
+      state.three.fillLight = fillLight;
+
+      sceneMount.replaceChildren(renderer.domElement);
+      applyCameraFromState();
+      resizeRenderer();
+    }
+
+    function setupGrid() {
+      const THREE = window.THREE;
+      const scene = state.three.scene;
+      if (!scene) {
+        return;
+      }
+
+      if (state.three.grid) {
+        scene.remove(state.three.grid);
+      }
+      if (state.three.anchorDots) {
+        scene.remove(state.three.anchorDots);
+      }
+
+      const gridGroup = new THREE.Group();
+      const gridMaterial = new THREE.LineBasicMaterial({ color: 0x8a8a8a, transparent: true, opacity: 0.34 });
+      const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x767676, transparent: true, opacity: 0.5 });
+
+      state.anchors = [];
+
+      for (let row = 0; row < GRID_POINTS; row += 1) {
+        const start = gridToWorld(row, 0);
+        const end = gridToWorld(row, GRID_POINTS - 1);
+        const line = createLine([start, end], row === 0 || row === GRID_POINTS - 1 ? edgeMaterial : gridMaterial);
+        gridGroup.add(line);
+      }
+
+      for (let col = 0; col < GRID_POINTS; col += 1) {
+        const start = gridToWorld(0, col);
+        const end = gridToWorld(GRID_POINTS - 1, col);
+        const line = createLine([start, end], col === 0 || col === GRID_POINTS - 1 ? edgeMaterial : gridMaterial);
+        gridGroup.add(line);
+      }
+
+      const anchorGeometry = new THREE.SphereGeometry(1.7, 12, 12);
+      const anchorMaterial = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.72 });
+      const anchorDots = new THREE.InstancedMesh(anchorGeometry, anchorMaterial, PARTICLE_POINTS * PARTICLE_POINTS);
+      const matrix = new THREE.Matrix4();
+      let index = 0;
+
+      for (let row = 0; row < PARTICLE_POINTS; row += 1) {
+        for (let col = 0; col < PARTICLE_POINTS; col += 1) {
+          const anchor = particleAnchorWorld(row, col);
+          state.anchors.push(anchor.clone());
+          matrix.setPosition(anchor);
+          anchorDots.setMatrixAt(index, matrix);
+          index += 1;
+        }
+      }
+
+      anchorDots.instanceMatrix.needsUpdate = true;
+      state.three.grid = gridGroup;
+      state.three.anchorDots = anchorDots;
+      scene.add(gridGroup, anchorDots);
+    }
+
+    function createParticles() {
+      const THREE = window.THREE;
+      const scene = state.three.scene;
+      if (!scene) {
+        return;
+      }
+
+      if (state.three.supportGroup) {
+        scene.remove(state.three.supportGroup);
+      }
+      if (state.three.particleGroup) {
+        scene.remove(state.three.particleGroup);
+      }
+
+      const supportGroup = new THREE.Group();
+      const particleGroup = new THREE.Group();
+      const supportMaterial = new THREE.LineBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.22 });
+      const particleGeometry = new THREE.SphereGeometry(state.scene.particleRadius * currentSceneScale(), 28, 28);
+
+      state.particles = [];
+
+      for (let row = 0; row < PARTICLE_POINTS; row += 1) {
+        for (let col = 0; col < PARTICLE_POINTS; col += 1) {
+          const id = row * PARTICLE_POINTS + col;
+          const anchor = particleAnchorWorld(row, col);
+
+          const supportGeometry = new THREE.BufferGeometry().setFromPoints([
+            anchor.clone(),
+            anchor.clone().add(new THREE.Vector3(0, -state.scene.baseLine, 0))
+          ]);
+          const support = new THREE.Line(supportGeometry, supportMaterial.clone());
+
+          const particleMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x8d959a,
+            transparent: true,
+            opacity: 0.46,
+            roughness: 0.6,
+            metalness: 0.04,
+            clearcoat: 0.18,
+            clearcoatRoughness: 0.72,
+            emissive: 0x000000
+          });
+          const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+          particle.position.copy(anchor);
+          particle.position.y = -state.scene.baseLine;
+
+          supportGroup.add(support);
+          particleGroup.add(particle);
+
+          state.particles.push({
+            id,
+            row,
+            col,
+            anchor,
+            support,
+            particle,
+            frequency: 0.8 + Math.random() * 0.8,
+            amplitude: 0.8 + Math.random() * 1.4,
+            turbulence: Math.random(),
+            phase: Math.random() * Math.PI * 2,
+            velocity: 0,
+            targetHeight: state.scene.baseLine,
+            currentHeight: state.scene.baseLine,
+            density: densityWeight(row, col),
+            localBias: Math.random() * 2 - 1
+          });
+        }
+      }
+
+      state.three.supportGroup = supportGroup;
+      state.three.particleGroup = particleGroup;
+      scene.add(supportGroup, particleGroup);
+    }
+
+    function updateSupportLine(particle, currentHeight) {
+      const positions = particle.support.geometry.attributes.position.array;
+      positions[0] = particle.anchor.x;
+      positions[1] = particle.anchor.y;
+      positions[2] = particle.anchor.z;
+      positions[3] = particle.anchor.x;
+      positions[4] = -currentHeight;
+      positions[5] = particle.anchor.z;
+      particle.support.geometry.attributes.position.needsUpdate = true;
+    }
+
+    function updateSimulation(now) {
+      const THREE = window.THREE;
+      const dt = Math.min(0.033, (now - state.lastTime) / 1000 || 0.016);
+      state.lastTime = now;
+      state.time += dt;
+
+      const frequency = state.params.frequency;
+      const amplitude = state.params.amplitude;
+      const turbulence = state.params.turbulence;
+      const complexity = state.params.complexity;
+      const stagnation = state.params.stagnation;
+      const pollutionDensity = state.params.pollutionDensity;
+
+      const speed = mapRange(frequency, 0, 100, 0.18, 1.95);
+      const lift = mapRange(amplitude, 0, 100, 5, 58);
+      const noiseAmount = mapRange(turbulence, 0, 100, 0.3, 15);
+      const complexityGain = mapRange(complexity, 0, 100, 0.4, 1.85);
+      const drag = mapRange(stagnation, 0, 100, 0.94, 0.992);
+      const stagnationInfluence = mapRange(stagnation, 0, 100, 0.12, 1.4);
+      const densitySink = mapRange(pollutionDensity, 0, 100, 0, 32);
+      const densityLag = mapRange(pollutionDensity, 0, 100, 0.9, 0.32);
+
+      for (const particle of state.particles) {
+        const harmonic = Math.sin(state.time * speed * particle.frequency + particle.phase);
+        const harmonicSecondary = Math.sin(
+          state.time * speed * 0.63 * (1 + particle.localBias * 0.12) +
+          particle.phase * 0.73 +
+          (particle.row - particle.col) * 0.25
+        );
+
+        const interference = fieldInterference(particle.row, particle.col, state.time, complexity) * complexityGain;
+        const turbulenceField = pseudoNoise(
+          particle.row * 0.78 + particle.phase,
+          particle.col * 0.72 - particle.phase,
+          state.time * speed * 1.35
+        ) * noiseAmount * (0.35 + particle.turbulence * 0.65);
+
+        const stagnationMask = 1 - smoothstep(0.2, 1, stagnationInfluence * (0.42 + particle.density * 0.58) * 0.5);
+        const densityCluster = particle.density * densitySink;
+        const downwardBias = densityCluster + mapRange(particle.localBias, -1, 1, -3, 3);
+
+        const motionSignal = (harmonic * 0.58 + harmonicSecondary * 0.22 + interference * 0.2) * lift;
+        const targetHeight = state.scene.baseLine + downwardBias - motionSignal * (0.35 + stagnationMask * densityLag) + turbulenceField;
+
+        particle.targetHeight = clamp(
+          targetHeight,
+          Math.max(state.scene.heightMin, state.scene.baseLine - state.scene.heightRange),
+          state.scene.baseLine + state.scene.heightRange
+        );
+        particle.velocity += (particle.targetHeight - particle.currentHeight) * dt * mapRange(frequency, 0, 100, 1.8, 7.8);
+        particle.velocity *= drag;
+        particle.currentHeight += particle.velocity;
+
+        const opacity = mapRange(pollutionDensity, 0, 100, 0.26, 0.56) + particle.density * 0.12;
+        const glow = mapRange(amplitude, 0, 100, 0.05, 0.24);
+
+        updateSupportLine(particle, particle.currentHeight);
+        particle.support.material.opacity = clamp(0.16 + particle.density * 0.2, 0.14, 0.46);
+
+        particle.particle.position.set(particle.anchor.x, -particle.currentHeight, particle.anchor.z);
+        particle.particle.material.opacity = clamp(opacity, 0.22, 0.7);
+        particle.particle.material.emissive.copy(new THREE.Color(0x5d666d).multiplyScalar(glow));
+      }
+
+      renderScene();
+      state.frame = requestAnimationFrame(updateSimulation);
+    }
+
+    function renderScene() {
+      if (!state.three.renderer || !state.three.scene || !state.three.camera) {
+        return;
+      }
+      state.three.renderer.render(state.three.scene, state.three.camera);
+    }
+
+    function applyCameraFromState() {
+      const THREE = window.THREE;
+      const { camera, target } = state.three;
+      if (!camera || !target || !THREE) {
+        return;
+      }
+
+      const yaw = THREE.MathUtils.degToRad(state.camera.yaw);
+      const tilt = THREE.MathUtils.degToRad(state.camera.tilt);
+      const radius = state.camera.zoom;
+      const sinTilt = Math.sin(tilt);
+
+      camera.position.set(
+        target.x + radius * sinTilt * Math.sin(yaw),
+        target.y + radius * Math.cos(tilt),
+        target.z + radius * sinTilt * Math.cos(yaw)
+      );
+      camera.lookAt(target);
+      renderScene();
+    }
+
+    function resizeRenderer() {
+      const { renderer, camera } = state.three;
+      if (!renderer || !camera) {
+        return;
+      }
+
+      const width = Math.max(sceneMount.clientWidth, 1);
+      const height = Math.max(sceneMount.clientHeight, 1);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+
+    function rebuildSceneObjects() {
+      setupGrid();
+      createParticles();
+      applyCameraFromState();
+      renderScene();
+    }
+
+    function resetView() {
+      state.camera = { ...defaultCameraState };
+      syncCameraUi();
+      applyCameraFromState();
+    }
+
+    function handleResize() {
+      resizeRenderer();
+      rebuildSceneObjects();
+    }
+
+    async function init() {
+      try {
+        clearSceneError();
+        buildControls();
+        buildCameraControls();
+        await loadScript(THREE_CDN);
+
+        if (!window.THREE) {
+          throw new Error('Three.js did not attach to window');
+        }
+
+        setupThreeScene();
+        setupPointerControls();
+        rebuildSceneObjects();
+        syncCameraUi();
+        state.lastTime = performance.now();
+        state.frame = requestAnimationFrame(updateSimulation);
+
+        window.addEventListener('resize', handleResize);
+        resetViewButton.addEventListener('click', resetView);
+      } catch (error) {
+        console.error(error);
+        showSceneError('3D scene failed to load. If you opened this file directly, your network or browser may be blocking remote scripts. Try again with internet access or serve the file from a local web server.');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

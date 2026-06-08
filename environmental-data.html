@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airscape Environmental Data</title>
+  <link rel="icon" type="image/png" href="./materials/icon.png" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400&display=swap');
+
+    :root {
+      color-scheme: light;
+      --bg: #fcf8f7;
+      --panel: rgba(255, 255, 255, 0.58);
+      --panel-strong: rgba(255, 255, 255, 0.66);
+      --ink: #422f3f;
+      --muted: rgba(66, 47, 63, 0.72);
+      --line: rgba(66, 47, 63, 0.12);
+      --soft-line: rgba(66, 47, 63, 0.16);
+      --accent-rose: rgba(214, 110, 160, 0.34);
+      --accent-rose-strong: rgba(214, 110, 160, 0.82);
+      --accent-gold: rgba(255, 224, 162, 0.9);
+      --accent-blue: rgba(168, 211, 255, 0.9);
+      --accent-lilac: rgba(200, 168, 255, 0.76);
+      --shadow-soft: 0 18px 34px rgba(126, 103, 129, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255, 214, 222, 0.72), transparent 32%),
+        radial-gradient(circle at 84% 18%, rgba(255, 236, 176, 0.68), transparent 30%),
+        radial-gradient(circle at 76% 82%, rgba(195, 224, 255, 0.66), transparent 34%),
+        linear-gradient(135deg, #fffaf8 0%, #fffdf8 42%, #f7f8ff 100%);
+      background-size: 120% 120%, 125% 125%, 130% 130%, 100% 100%;
+      color: var(--ink);
+      font-family: "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 300;
+    }
+
+    body {
+      position: relative;
+      overflow-x: hidden;
+      animation: ambientWash 18s ease-in-out infinite alternate;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -12%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(30px);
+      opacity: 0.72;
+      mix-blend-mode: screen;
+    }
+
+    body::before {
+      background:
+        radial-gradient(circle at 20% 30%, rgba(255, 210, 220, 0.55), transparent 32%),
+        radial-gradient(circle at 72% 24%, rgba(255, 234, 170, 0.5), transparent 30%);
+      animation: driftGlow 22s ease-in-out infinite alternate;
+    }
+
+    body::after {
+      background:
+        radial-gradient(circle at 72% 72%, rgba(190, 220, 255, 0.42), transparent 34%),
+        radial-gradient(circle at 42% 80%, rgba(255, 238, 205, 0.32), transparent 28%);
+      animation: driftGlowReverse 26s ease-in-out infinite alternate;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      width: min(1240px, calc(100% - 52px));
+      margin: 0 auto;
+      padding: clamp(20px, 4vw, 36px) 0 clamp(30px, 5vw, 52px);
+      display: grid;
+      gap: clamp(16px, 2vw, 24px);
+    }
+
+    .hero,
+    .panel,
+    .module,
+    .trend-card,
+    .timeline,
+    .snapshot-card {
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+      gap: clamp(16px, 2vw, 22px);
+      padding: clamp(20px, 3vw, 30px) clamp(20px, 3vw, 32px);
+      border-radius: clamp(24px, 3vw, 30px);
+    }
+
+    .hero__intro {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .hero__eyebrow,
+    .hero__subtitle,
+    .hero__description,
+    .hero__stat-label,
+    .hero__stat-value,
+    .panel__title,
+    .panel__meta,
+    .module__eyebrow,
+    .module__title,
+    .metric__label,
+    .metric__value,
+    .metric__meta,
+    .footer-note,
+    .heatmap__label,
+    .heatmap__meta,
+    .legend__label,
+    .legend__value,
+    .chip,
+    .ring__center,
+    .ring__caption {
+      margin: 0;
+      font-family: "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 300;
+    }
+
+    .hero__eyebrow,
+    .panel__title,
+    .module__eyebrow,
+    .heatmap__label,
+    .legend__label,
+    .chip,
+    .metric__label,
+    .ring__caption,
+    .panel__meta,
+    .mapping-overview__title,
+    .mapping-formula__label,
+    .mapping-note__title {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-weight: 400;
+    }
+
+    .hero__eyebrow {
+      font-size: clamp(0.64rem, 1.2vw, 0.72rem);
+      letter-spacing: 0.24em;
+      color: var(--muted);
+    }
+
+    .hero__title {
+      margin: 0;
+      font-family: "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 1.02;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .hero__subtitle {
+      font-size: clamp(0.76rem, 1.3vw, 0.88rem);
+      line-height: 1.75;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .hero__description {
+      max-width: 60ch;
+      font-size: clamp(0.76rem, 1.25vw, 0.84rem);
+      line-height: 1.9;
+      letter-spacing: 0.01em;
+      color: rgba(66, 47, 63, 0.88);
+    }
+
+    .hero__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-top: 4px;
+    }
+
+    .hero__link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-family: "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: clamp(0.64rem, 1vw, 0.7rem);
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .hero__link--primary {
+      border: 1px solid rgba(214, 110, 160, 0.34);
+      background: linear-gradient(135deg, rgba(245, 225, 235, 0.92), rgba(218, 235, 255, 0.84), rgba(255, 254, 218, 0.84));
+      color: #6d244c;
+      box-shadow: 0 8px 10px rgba(214, 110, 160, 0.16);
+    }
+
+    .hero__link--secondary {
+      background: rgba(255, 255, 255, 0.54);
+      border: 1px solid rgba(66, 47, 63, 0.14);
+      color: var(--ink);
+    }
+
+    .hero__link:hover {
+      transform: translateY(-1px);
+    }
+
+    .hero__link--primary:hover {
+      background: linear-gradient(135deg, rgba(255, 224, 240, 0.98), rgba(248, 198, 225, 0.92));
+      border-color: rgba(255, 210, 232, 0.46);
+      box-shadow: 0 10px 22px rgba(214, 110, 160, 0.22);
+    }
+
+    .hero__snapshot {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.34);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .hero__stream-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.58rem;
+      color: rgba(66, 47, 63, 0.58);
+    }
+
+    .chip::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(214, 110, 160, 0.7);
+      box-shadow: 0 0 0 5px rgba(214, 110, 160, 0.1);
+    }
+
+    .mini-wave,
+    .chart,
+    .density-chart,
+    .traffic-chart,
+    .heatmap {
+      border-radius: 20px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.42);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+    }
+
+    .mini-wave {
+      height: 108px;
+    }
+
+    .mini-wave svg,
+    .chart svg,
+    .compass svg,
+    .ring svg,
+    .density-chart svg,
+    .traffic-chart svg,
+    .heatmap svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hero__stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .hero__stat,
+    .snapshot-card {
+      display: grid;
+      gap: 6px;
+      padding: 14px 14px 12px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.48);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .hero__stat-label,
+    .snapshot-card__label {
+      font-size: clamp(0.54rem, 0.95vw, 0.62rem);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .hero__stat-value,
+    .snapshot-card__value {
+      font-size: clamp(0.98rem, 1.6vw, 1.16rem);
+      letter-spacing: 0.02em;
+      line-height: 1.25;
+      font-weight: 400;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.34fr) minmax(320px, 0.82fr);
+      gap: 24px;
+    }
+
+    .panel {
+      border-radius: clamp(24px, 3vw, 28px);
+      padding: clamp(18px, 2.4vw, 24px);
+      display: grid;
+      gap: 18px;
+      min-height: 100%;
+    }
+
+    .panel__header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .panel__title {
+      font-size: clamp(0.8rem, 1.2vw, 0.92rem);
+    }
+
+    .panel__meta {
+      font-size: clamp(0.58rem, 0.95vw, 0.68rem);
+      color: var(--muted);
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(12px, 1.6vw, 14px);
+      align-content: start;
+    }
+
+    .module {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.44);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34), var(--shadow-soft);
+    }
+
+    .module--wide {
+      grid-column: span 2;
+    }
+
+    .module__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+    }
+
+    .module__eyebrow {
+      font-size: clamp(0.54rem, 0.95vw, 0.62rem);
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .module__title {
+      font-size: clamp(0.92rem, 1.45vw, 1.08rem);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .metric__label {
+      font-size: clamp(0.54rem, 0.95vw, 0.62rem);
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 400;
+    }
+
+    .metric__value {
+      font-size: clamp(1.56rem, 2.6vw, 2.32rem);
+      line-height: 1.02;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .metric__meta,
+    .legend__value,
+    .heatmap__meta,
+    .mapping-overview__meta,
+    .mapping-step__text,
+    .mapping-formula__value,
+    .mapping-note__text {
+      font-size: clamp(0.6rem, 0.95vw, 0.68rem);
+      line-height: 1.85;
+      letter-spacing: 0.01em;
+      color: rgba(66, 47, 63, 0.74);
+    }
+
+    .chart {
+      height: 140px;
+    }
+
+    .legend,
+    .snapshot-grid,
+    .trend-grid,
+    .timeline-grid,
+    .traffic-notes {
+      display: grid;
+      gap: 10px;
+    }
+
+    .legend {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .legend__item,
+    .traffic-note {
+      display: grid;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.42);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .legend__label {
+      font-size: clamp(0.5rem, 0.82vw, 0.56rem);
+      color: rgba(66, 47, 63, 0.58);
+      font-weight: 400;
+    }
+
+    .compass-wrap,
+    .ring-wrap,
+    .density-wrap {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+    }
+
+    .compass {
+      width: 180px;
+      height: 180px;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(255, 248, 252, 0.96), rgba(240, 244, 255, 0.88));
+      border: 1px solid rgba(66, 47, 63, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .pm-bar {
+      position: relative;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(66, 47, 63, 0.08);
+      overflow: hidden;
+    }
+
+    .pm-bar__fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 68%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(164, 221, 167, 0.95), rgba(255, 222, 171, 0.95), rgba(246, 170, 165, 0.95), rgba(214, 110, 160, 0.9));
+    }
+
+    .ring {
+      width: 160px;
+      height: 160px;
+      position: relative;
+      margin: 0 auto;
+    }
+
+    .ring__center,
+    .ring__caption {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      width: 100%;
+      pointer-events: none;
+    }
+
+    .ring__center {
+      top: 58px;
+      font-size: 1.5rem;
+      letter-spacing: 0.04em;
+    }
+
+    .ring__caption {
+      top: 90px;
+      font-size: clamp(0.52rem, 0.9vw, 0.6rem);
+      color: var(--muted);
+    }
+
+    .density-chart,
+    .traffic-chart {
+      height: 170px;
+    }
+
+    .heatmap {
+      height: 268px;
+    }
+
+    .heatmap__footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .heatmap__label {
+      font-size: clamp(0.54rem, 0.95vw, 0.62rem);
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 400;
+    }
+
+    .heat-scale {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .heat-scale__bar {
+      width: 152px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(168, 211, 255, 0.96), rgba(215, 239, 179, 0.96), rgba(255, 225, 164, 0.96), rgba(239, 148, 128, 0.96), rgba(214, 110, 160, 0.94));
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .trend-card {
+      display: grid;
+      gap: 8px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.44);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .trend-card__title {
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.36);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .timeline__row {
+      display: grid;
+      grid-template-columns: 72px 1fr auto;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .timeline__label {
+      font-size: 0.58rem;
+      color: var(--muted);
+    }
+
+    .timeline__bar {
+      position: relative;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(66, 47, 63, 0.08);
+      overflow: hidden;
+    }
+
+    .timeline__fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255, 210, 220, 0.9), rgba(188, 218, 255, 0.92));
+    }
+
+    .mapping-doc {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .mapping-overview {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.44);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+    }
+
+    .mapping-overview__title,
+    .mapping-overview__value,
+    .mapping-overview__meta,
+    .mapping-step__title,
+    .mapping-step__text,
+    .mapping-step__arrow,
+    .mapping-formula__label,
+    .mapping-formula__value,
+    .mapping-note__title,
+    .mapping-note__text {
+      margin: 0;
+      font-weight: 300;
+    }
+
+    .mapping-overview__title,
+    .mapping-formula__label,
+    .mapping-note__title {
+      font-size: clamp(0.54rem, 0.95vw, 0.62rem);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .mapping-overview__value {
+      font-size: clamp(1.02rem, 1.8vw, 1.36rem);
+      line-height: 1.6;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .mapping-overview__meta,
+    .mapping-step__text,
+    .mapping-formula__value,
+    .mapping-note__text {
+      font-size: 0.64rem;
+      line-height: 1.85;
+      letter-spacing: 0.04em;
+      color: rgba(66, 47, 63, 0.74);
+    }
+
+    .mapping-flow {
+      display: grid;
+      gap: 10px;
+    }
+
+    .mapping-step {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.42);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .mapping-step__card {
+      display: grid;
+      gap: 4px;
+    }
+
+    .mapping-step__title {
+      font-size: clamp(0.68rem, 1.1vw, 0.78rem);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .mapping-step__arrow {
+      font-size: 0.92rem;
+      color: rgba(66, 47, 63, 0.48);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .mapping-formula {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .mapping-formula__grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .mapping-formula__item,
+    .mapping-note {
+      display: grid;
+      gap: 4px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(66, 47, 63, 0.08);
+    }
+
+    .mapping-note-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .footer-note {
+      font-size: 0.66rem;
+      line-height: 1.9;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      padding-top: 6px;
+    }
+
+    @keyframes ambientWash {
+      0% {
+        background-position: 0% 0%, 100% 0%, 100% 100%, 50% 50%;
+      }
+      100% {
+        background-position: 8% 6%, 92% 12%, 84% 94%, 50% 50%;
+      }
+    }
+
+    @keyframes driftGlow {
+      0% {
+        transform: translate3d(-2%, -1%, 0) scale(1);
+      }
+      100% {
+        transform: translate3d(3%, 2%, 0) scale(1.06);
+      }
+    }
+
+    @keyframes driftGlowReverse {
+      0% {
+        transform: translate3d(2%, 1%, 0) scale(1.02);
+      }
+      100% {
+        transform: translate3d(-3%, -2%, 0) scale(1.08);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .page {
+        width: min(100%, calc(100% - 28px));
+        padding: 22px 0 36px;
+      }
+
+      .hero,
+      .layout,
+      .compass-wrap,
+      .ring-wrap,
+      .density-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .layout {
+        gap: 18px;
+      }
+
+      .compass,
+      .ring {
+        margin-inline: auto;
+      }
+
+      .interpretive-lead__row {
+        grid-template-columns: 74px 1fr auto;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero,
+      .panel {
+        padding: 18px;
+        border-radius: 22px;
+      }
+
+      .hero__title {
+        font-size: clamp(1.72rem, 8vw, 2.28rem);
+        line-height: 1.08;
+      }
+
+      .hero__subtitle,
+      .hero__description,
+      .metric__meta,
+      .heatmap__meta,
+      .mapping-overview__meta,
+      .mapping-step__text,
+      .mapping-formula__value,
+      .mapping-note__text {
+        line-height: 1.75;
+      }
+
+      .hero__stats,
+      .modules-grid,
+      .legend,
+      .traffic-notes {
+        grid-template-columns: 1fr;
+      }
+
+      .mapping-step {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .mapping-step__arrow {
+        display: none;
+      }
+
+      .compass-wrap,
+      .ring-wrap,
+      .density-wrap {
+        gap: 12px;
+      }
+
+      .compass {
+        width: min(180px, 100%);
+        height: auto;
+        aspect-ratio: 1;
+      }
+
+      .ring {
+        width: min(160px, 100%);
+        height: auto;
+        aspect-ratio: 1;
+      }
+
+      .chart,
+      .mini-wave,
+      .traffic-chart,
+      .density-chart {
+        height: 128px;
+      }
+
+      .heatmap {
+        height: 220px;
+      }
+
+      .timeline__row,
+      .interpretive-lead__row {
+        grid-template-columns: 64px 1fr;
+      }
+
+      .timeline__value,
+      .interpretive-lead__score {
+        grid-column: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Environmental data overview">
+      <div class="hero__intro">
+        <p class="hero__eyebrow">Atmospheric Installation Interface</p>
+        <h1 class="hero__title">Environmental Data</h1>
+        <p class="hero__subtitle">Airscape / Atmospheric Reading Layer</p>
+        <p class="hero__description">
+          A lighter environmental dashboard aligned with the motion interface language in the main page.
+          The information remains visual, but now uses the same pastel atmosphere, mono typography,
+          translucent panels and soft gradients as `simulation.html`.
+        </p>
+        <div class="hero__actions">
+          <a class="hero__link hero__link--primary" href="./simulation.html">Back to Motion Engine</a>
+          <a class="hero__link hero__link--secondary" href="./index.html">Open Landing Page</a>
+        </div>
+      </div>
+
+      <aside class="hero__snapshot" aria-label="Key environmental snapshot">
+        <div class="hero__stream-header">
+          <p class="panel__title">Ambient Snapshot</p>
+          <p class="chip">Demo feed</p>
+        </div>
+        <div class="mini-wave" aria-hidden="true">
+          <svg viewBox="0 0 400 108" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="heroWaveFill" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="rgba(214,110,160,0.24)" />
+                <stop offset="100%" stop-color="rgba(214,110,160,0.03)" />
+              </linearGradient>
+              <linearGradient id="heroWaveStroke" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="rgba(214,110,160,0.85)" />
+                <stop offset="100%" stop-color="rgba(155,186,255,0.9)" />
+              </linearGradient>
+            </defs>
+            <g opacity="0.18" stroke="rgba(66,47,63,0.32)">
+              <line x1="0" y1="20" x2="400" y2="20" />
+              <line x1="0" y1="54" x2="400" y2="54" />
+              <line x1="0" y1="88" x2="400" y2="88" />
+            </g>
+            <path d="M0,108 L0,63 C28,50 45,46 66,54 C90,63 114,83 138,69 C157,58 177,29 197,35 C215,40 237,74 259,66 C282,57 302,25 326,30 C348,35 370,68 400,48 L400,108 Z" fill="url(#heroWaveFill)" />
+            <path d="M0,63 C28,50 45,46 66,54 C90,63 114,83 138,69 C157,58 177,29 197,35 C215,40 237,74 259,66 C282,57 302,25 326,30 C348,35 370,68 400,48" fill="none" stroke="url(#heroWaveStroke)" stroke-width="2.6" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="hero__stats">
+          <article class="hero__stat">
+            <p class="hero__stat-label">Wind Flow</p>
+            <p class="hero__stat-value">4.8 m/s</p>
+          </article>
+          <article class="hero__stat">
+            <p class="hero__stat-label">Urban AQI</p>
+            <p class="hero__stat-value">117</p>
+          </article>
+          <article class="hero__stat">
+            <p class="hero__stat-label">Heat Island</p>
+            <p class="hero__stat-value">+3.2°C</p>
+          </article>
+          <article class="hero__stat">
+            <p class="hero__stat-label">Humidity</p>
+            <p class="hero__stat-value">72%</p>
+          </article>
+        </div>
+      </aside>
+    </section>
+
+    <section class="layout">
+      <section class="panel" aria-label="Environmental visual modules">
+        <div class="panel__header">
+          <p class="panel__title">Current Environmental Feed</p>
+          <p class="panel__meta">8 visual inputs</p>
+        </div>
+
+        <div class="modules-grid">
+          <article class="module">
+            <div class="module__header">
+              <div>
+                <p class="module__eyebrow">Wind Speed</p>
+                <p class="module__title">Airflow Velocity</p>
+              </div>
+              <p class="chip">Wave field</p>
+            </div>
+            <div>
+              <p class="metric__label">Current speed</p>
+              <p class="metric__value">4.8 m/s</p>
+              <p class="metric__meta">Large-value reading paired with a soft real-time style waveform.</p>
+            </div>
+            <div class="chart" aria-hidden="true">
+              <svg viewBox="0 0 360 140" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="windArea" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(214,110,160,0.2)" />
+                    <stop offset="100%" stop-color="rgba(214,110,160,0.02)" />
+                  </linearGradient>
+                </defs>
+                <g opacity="0.14" stroke="rgba(66,47,63,0.32)">
+                  <line x1="0" y1="20" x2="360" y2="20" />
+                  <line x1="0" y1="50" x2="360" y2="50" />
+                  <line x1="0" y1="80" x2="360" y2="80" />
+                  <line x1="0" y1="110" x2="360" y2="110" />
+                </g>
+                <path d="M0,140 L0,98 C20,84 35,68 52,72 C75,77 88,110 112,102 C138,93 146,41 174,46 C201,51 218,103 239,90 C258,77 270,32 294,37 C319,42 330,89 360,69 L360,140 Z" fill="url(#windArea)" />
+                <path d="M0,98 C20,84 35,68 52,72 C75,77 88,110 112,102 C138,93 146,41 174,46 C201,51 218,103 239,90 C258,77 270,32 294,37 C319,42 330,89 360,69" fill="none" stroke="rgba(214,110,160,0.88)" stroke-width="2.6" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="legend">
+              <div class="legend__item">
+                <p class="legend__label">Peak</p>
+                <p class="legend__value">6.1 m/s at 14:20</p>
+              </div>
+              <div class="legend__item">
+                <p class="legend__label">Mean</p>
+                <p class="legend__value">4.3 m/s corridor flow</p>
+              </div>
+              <div class="legend__item">
+                <p class="legend__label">State</p>
+                <p class="legend__value">Moderate ventilation</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="module">
+            <div class="module__header">
+              <div>
+                <p class="module__eyebrow">Wind Direction</p>
+                <p class="module__title">Compass Reading</p>
+              </div>
+              <p class="chip">Southwest</p>
+            </div>
+            <div class="compass-wrap">
+              <div class="compass" aria-hidden="true">
+                <svg viewBox="0 0 180 180">
+                  <circle cx="90" cy="90" r="72" fill="none" stroke="rgba(66,47,63,0.18)" stroke-width="1.5" />
+                  <circle cx="90" cy="90" r="54" fill="none" stroke="rgba(66,47,63,0.12)" stroke-width="1" stroke-dasharray="4 6" />
+                  <g fill="rgba(66,47,63,0.82)" font-size="10" font-family="IBM Plex Mono, monospace" text-anchor="middle">
+                    <text x="90" y="20">N</text>
+                    <text x="160" y="94">E</text>
+                    <text x="90" y="168">S</text>
+                    <text x="20" y="94">W</text>
+                  </g>
+                  <g stroke="rgba(66,47,63,0.12)" stroke-width="1">
+                    <line x1="90" y1="28" x2="90" y2="152" />
+                    <line x1="28" y1="90" x2="152" y2="90" />
+                    <line x1="46" y1="46" x2="134" y2="134" />
+                    <line x1="134" y1="46" x2="46" y2="134" />
+                  </g>
+                  <g transform="rotate(228 90 90)">
+                    <path d="M90 28 L101 96 L90 86 L79 96 Z" fill="rgba(214,110,160,0.9)" />
+                    <path d="M90 152 L101 84 L90 94 L79 84 Z" fill="rgba(168,211,255,0.62)" />
+                  </g>
+                  <circle cx="90" cy="90" r="7" fill="rgba(66,47,63,0.72)" />
+                </svg>
+              </div>
+              <div>
+                <p class="metric__label">Airflow heading</p>
+                <p class="metric__value">228° SW</p>
+                <p class="metric__meta">A compass view makes the directional change feel closer to the main interface language.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="module">
+            <div class="module__header">
+              <div>
+                <p class="module__eyebrow">PM2.5</p>
+                <p class="module__title">Particle Concentration</p>
+              </div>
+              <p class="chip">Elevated</p>
+            </div>
+            <div>
+              <p class="metric__label">Current density</p>
+              <p class="metric__value">68 µg/m³</p>
+              <p class="metric__meta">Number, colored progress strip and curve work together to show severity.</p>
+            </div>
+            <div class="pm-bar"><div class="pm-bar__fill"></div></div>
+            <div class="chart" aria-hidden="true">
+              <svg viewBox="0 0 360 140" preserveAspectRatio="none">
+                <g opacity="0.14" stroke="rgba(66,47,63,0.32)">
+                  <line x1="0" y1="24" x2="360" y2="24" />
+                  <line x1="0" y1="58" x2="360" y2="58" />
+                  <line x1="0" y1="94" x2="360" y2="94" />
+                </g>
+                <path d="M0,92 C28,86 52,72 77,68 C109,63 129,76 155,60 C180,45 202,30 226,38 C253,47 279,92 308,88 C328,85 344,74 360,64" fill="none" stroke="rgba(214,110,160,0.88)" stroke-width="2.8" stroke-linecap="round" />
+                <g fill="rgba(255,196,128,0.92)">
+                  <circle cx="77" cy="68" r="4" />
+                  <circle cx="155" cy="60" r="4" />
+                  <circle cx="226" cy="38" r="4" />
+                  <circle cx="308" cy="88" r="4" />
+                </g>
+              </svg>
+            </div>
+          </article>
+
+          <article class="module">
+            <div class="module__header">
+              <div>
+                <p class="module__eyebrow">Temperature / Humidity</p>
+                <p class="module__title">Thermal Comfort</p>
+              </div>
+              <p class="chip">Dual display</p>
+            </div>
+            <div class="ring-wrap">
+              <div class="ring" aria-hidden="true">
+                <svg viewBox="0 0 160 160">
+                  <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(66,47,63,0.1)" stroke-width="12" />
+                  <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(168,211,255,0.92)" stroke-width="12" stroke-linecap="round" stroke-dasharray="253 352" transform="rotate(-90 80 80)" />
+                </svg>
+                <div class="ring__center">72%</div>
+                <div class="ring__caption">Humidity</div>
+              </div>
+              <div>
+                <p class="metric__label">Surface temperature</p>
+                <p class="metric__value">31.4°C</p>
+                <p class="metric__meta">Temperature trend and humidity ring separate instant value from ambient retention.</p>
+              </div>
+            </div>
+            <div class="chart" aria-hidden="true">
+              <svg viewBox="0 0 360 140" preserveAspectRatio="none">
+                <g opacity="0.14" stroke="rgba(66,47,63,0.32)">
+                  <line x1="0" y1="24" x2="360" y2="24" />
+                  <line x1="0" y1="56" x2="360" y2="56" />
+                  <line x1="0" y1="88" x2="360" y2="88" />
+                  <line x1="0" y1="120" x2="360" y2="120" />
+                </g>
+                <path d="M0,108 C25,104 48,99 72,86 C98,72 123,46 147,42 C171,38 192,50 217,62 C244,75 266,78 291,64 C317,49 334,33 360,28" fill="none" stroke="rgba(239,148,128,0.92)" stroke-width="2.8" stroke-linecap="round" />
+              </svg>
+            </div>
+          </article>
+
+          <article class="module module--wide">
+            <div class="module__header">
+              <div>
+                <p class="module__eyebrow">Heat Island Effect</p>
+                <p class="module__title">Urban Thermal Field</p>
+              </div>
+              <p class="chip">Heat map</p>
+            </div>
+            <div class="heatmap" aria-hidden="true">
+              <svg viewBox="0 0 760 268" preserveAspectRatio="none">
+                <defs>
+                  <radialGradient id="hotA" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="rgba(214,110,160,0.82)" />
+                    <stop offset="100%" stop-color="rgba(214,110,160,0)" />
+                  </radialGradient>
+                  <radialGradient id="hotB" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="rgba(239,148,128,0.76)" />
+                    <stop offset="100%" stop-color="rgba(239,148,128,0)" />
+                  </radialGradient>
+                  <radialGradient id="coolA" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="rgba(168,211,255,0.72)" />
+                    <stop offset="100%" stop-color="rgba(168,211,255,0)" />
+                  </radialGradient>
+                </defs>
+                <g opacity="0.12" stroke="rgba(66,47,63,0.28)">
+                  <path d="M0 54 H760" />
+                  <path d="M0 108 H760" />
+                  <path d="M0 162 H760" />
+                  <path d="M0 216 H760" />
+                  <path d="M95 0 V268" />
+                  <path d="M190 0 V268" />
+                  <path d="M285 0 V268" />
+                  <path d="M380 0 V268" />
+                  <path d="M475 0 V268" />
+                  <path d="M570 0 V268" />
+                  <path d="M665 0 V268" />
+                </g>
+                <g fill="rgba(255,255,255,0.38)">
+                  <rect x="72" y="62" width="92" height="84" rx="16" />
+                  <rect x="210" y="40" width="126" height="96" rx="16" />
+                  <rect x="372" y="86" width="108" height="114" rx="16" />
+                  <rect x="520" y="54" width="154" height="88" rx="18" />
+                  <rect x="184" y="170" width="112" height="62" rx="16" />
+                  <rect x="522" y="172" width="102" height="52" rx="16" />
+                </g>
+                <circle cx="258" cy="88" r="94" fill="url(#hotA)" />
+                <circle cx="552" cy="118" r="86" fill="url(#hotB)" />
+                <circle cx="428" cy="174" r="76" fill="url(#hotB)" opacity="0.72" />
+                <circle cx="144" cy="176" r="70" fill="url(#coolA)" />
+                <circle cx="684" cy="188" r="56" fill="url(#coolA)" opacity="0.76" />
+                <g fill="rgba(66,47,63,0.72)" font-size="12" font-family="IBM Plex Mono, monospace">
+                  <text x="226" y="48">dense core</text>
+                  <text x="520" y="40">traffic edge</text>
+                  <text x="106" y="244">cool park</text>
+                </g>
+              </svg>
+            </div>
+            <div class="heatmap__footer">
+              <div>
+                <p class="heatmap__label">Heat island delta</p>
+                <p class="heatmap__meta">Hot zones concentrate around denser blocks and transport frontage, while open edges release faster.</p>
+              </div>
+              <div class="heat-scale">
+                <span class="heatmap__meta">cool</span>
+                <div class="heat-scale__bar"></div>
+                <span class="heatmap__meta">hot</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="module">
+            <div class="module__header">
+              <div>
+                <p class="module__eyebrow">Building Density</p>
+                <p class="module__title">Urban Mass Index</p>
+              </div>
+              <p class="chip">FAR</p>
+            </div>
+            <div class="density-wrap">
+              <div class="density-chart" aria-hidden="true">
+                <svg viewBox="0 0 170 170">
+                  <g stroke="rgba(66,47,63,0.18)">
+                    <line x1="18" y1="146" x2="152" y2="146" />
+                    <line x1="18" y1="114" x2="152" y2="114" />
+                    <line x1="18" y1="82" x2="152" y2="82" />
+                    <line x1="18" y1="50" x2="152" y2="50" />
+                  </g>
+                  <rect x="24" y="94" width="26" height="52" rx="4" fill="rgba(214,110,160,0.56)" />
+                  <rect x="58" y="62" width="26" height="84" rx="4" fill="rgba(255,220,168,0.76)" />
+                  <rect x="92" y="40" width="26" height="106" rx="4" fill="rgba(168,211,255,0.88)" />
+                  <rect x="126" y="74" width="20" height="72" rx="4" fill="rgba(200,168,255,0.72)" />
+                </svg>
+              </div>
+              <div>
+                <p class="metric__label">Floor area ratio</p>
+                <p class="metric__value">0.81 FAR</p>
+                <p class="metric__meta">The density chart stays visual, but now uses the same softened pastel palette as the main page.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="module">
+            <div class="module__header">
+              <div>
+                <p class="module__eyebrow">Traffic Emissions</p>
+                <p class="module__title">Transport Exhaust</p>
+              </div>
+              <p class="chip">Road layer</p>
+            </div>
+            <div class="traffic-chart" aria-hidden="true">
+              <svg viewBox="0 0 360 170" preserveAspectRatio="none">
+                <g opacity="0.14" stroke="rgba(66,47,63,0.32)">
+                  <line x1="0" y1="28" x2="360" y2="28" />
+                  <line x1="0" y1="72" x2="360" y2="72" />
+                  <line x1="0" y1="116" x2="360" y2="116" />
+                  <line x1="0" y1="160" x2="360" y2="160" />
+                </g>
+                <path d="M0,140 C29,134 57,124 81,120 C108,116 125,131 150,108 C177,83 197,34 222,32 C247,30 263,72 286,82 C310,92 331,81 360,54" fill="none" stroke="rgba(239,148,128,0.9)" stroke-width="2.8" stroke-linecap="round" />
+                <path d="M0,148 C32,145 54,143 79,132 C107,120 124,109 150,108 C174,107 201,127 225,124 C251,121 272,98 298,92 C322,87 340,91 360,104" fill="none" stroke="rgba(200,168,255,0.88)" stroke-width="2.2" stroke-dasharray="8 8" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="traffic-notes">
+              <div class="traffic-note">
+                <p class="legend__label">Peak corridor</p>
+                <p class="legend__value">17:30 roadside build-up</p>
+              </div>
+              <div class="traffic-note">
+                <p class="legend__label">Primary driver</p>
+                <p class="legend__value">Bus + private vehicle mix</p>
+              </div>
+              <div class="traffic-note">
+                <p class="legend__label">Dispersion</p>
+                <p class="legend__value">Low in sheltered edges</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Environmental to motion mapping logic">
+        <div class="panel__header">
+          <p class="panel__title">Environmental → Motion Mapping</p>
+          <p class="panel__meta">Parameter logic</p>
+        </div>
+
+        <div class="mapping-doc">
+          <article class="mapping-overview">
+            <p class="mapping-overview__title">Translation principle</p>
+            <p class="mapping-overview__value">Environmental data is translated into motion parameters so atmospheric conditions can directly shape the visual wave behaviour.</p>
+            <p class="mapping-overview__meta">
+              Instead of reading wind and pollution only as statistics, this layer explains how each environmental signal becomes a formal motion input inside the Airscape system.
+            </p>
+          </article>
+
+          <div class="mapping-flow">
+            <article class="mapping-step">
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Wind Speed</p>
+                <p class="mapping-step__text">Controls the energy of the field and sets the baseline force of movement.</p>
+              </div>
+              <p class="mapping-step__arrow">→</p>
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Wave Amplitude</p>
+                <p class="mapping-step__text">Higher wind speed produces larger displacement and stronger visible oscillation.</p>
+              </div>
+            </article>
+
+            <article class="mapping-step">
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Wind Direction</p>
+                <p class="mapping-step__text">Determines the prevailing sweep and directional bias of the motion field.</p>
+              </div>
+              <p class="mapping-step__arrow">→</p>
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Turbulence</p>
+                <p class="mapping-step__text">Directional instability introduces local eddies, turning smooth flow into fluctuating turbulence.</p>
+              </div>
+            </article>
+
+            <article class="mapping-step">
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Humidity + Heat Island</p>
+                <p class="mapping-step__text">Moisture retention and urban heat accumulation increase lingering, layered atmospheric behaviour.</p>
+              </div>
+              <p class="mapping-step__arrow">→</p>
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Wave Complexity</p>
+                <p class="mapping-step__text">Higher retention produces denser, slower-decaying overlaps and more complex wave interference.</p>
+              </div>
+            </article>
+
+            <article class="mapping-step">
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">PM2.5 + Traffic Emissions</p>
+                <p class="mapping-step__text">Particle concentration and roadside exhaust define the intensity of suspended matter in the urban air layer.</p>
+              </div>
+              <p class="mapping-step__arrow">→</p>
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Pollution Density</p>
+                <p class="mapping-step__text">Higher particle load increases the visual density, opacity and clustering of polluted regions.</p>
+              </div>
+            </article>
+
+            <article class="mapping-step">
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Building Density</p>
+                <p class="mapping-step__text">Urban mass changes how air is channelled, trapped or accelerated across the site.</p>
+              </div>
+              <p class="mapping-step__arrow">→</p>
+              <div class="mapping-step__card">
+                <p class="mapping-step__title">Flow Constraint</p>
+                <p class="mapping-step__text">Dense blocks compress the motion field and amplify localized variation in the wave pattern.</p>
+              </div>
+            </article>
+          </div>
+
+          <article class="mapping-formula">
+            <p class="mapping-formula__label">Core mapping logic</p>
+            <div class="mapping-formula__grid">
+              <div class="mapping-formula__item">
+                <p class="mapping-formula__label">Wave Amplitude</p>
+                <p class="mapping-formula__value">Primarily driven by wind speed.</p>
+              </div>
+              <div class="mapping-formula__item">
+                <p class="mapping-formula__label">Turbulence</p>
+                <p class="mapping-formula__value">Driven by wind-direction variability and obstruction from dense urban form.</p>
+              </div>
+              <div class="mapping-formula__item">
+                <p class="mapping-formula__label">Wave Complexity</p>
+                <p class="mapping-formula__value">Driven by humidity, heat retention and the overlap of multiple atmospheric conditions.</p>
+              </div>
+              <div class="mapping-formula__item">
+                <p class="mapping-formula__label">Pollution Density</p>
+                <p class="mapping-formula__value">Driven by PM2.5 concentration, traffic emissions and weak ventilation pockets.</p>
+              </div>
+            </div>
+          </article>
+
+          <div class="mapping-note-grid">
+            <article class="mapping-note">
+              <p class="mapping-note__title">Why this matters</p>
+              <p class="mapping-note__text">This logic turns environmental sensing into spatial motion behaviour, allowing users to understand invisible atmospheric conditions through visual movement.</p>
+            </article>
+            <article class="mapping-note">
+              <p class="mapping-note__title">System role</p>
+              <p class="mapping-note__text">The panel acts like a lightweight doc: it clarifies how raw environmental inputs are converted into the motion parameters used by the main Airscape visualization.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <p class="footer-note">
+      Demo-only environmental interface for Airscape. No live API connection is active in this prototype.
+    </p>
+  </main>
+</body>
+</html>

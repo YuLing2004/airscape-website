@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airscape Motion Mapping Interface</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #fcf8f7;
+      --panel: rgba(255, 255, 255, 0.58);
+      --ink: #422f3f;
+      --muted: rgba(66, 47, 63, 0.72);
+      --line: rgba(66, 47, 63, 0.12);
+      --soft-line: rgba(66, 47, 63, 0.16);
+      --particle: rgba(152, 110, 151, 0.92);
+      --particle-stroke: rgba(66, 47, 63, 0.22);
+      --track: rgba(66, 47, 63, 0.1);
+      --thumb: #422f3f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255, 214, 222, 0.72), transparent 32%),
+        radial-gradient(circle at 84% 18%, rgba(255, 236, 176, 0.68), transparent 30%),
+        radial-gradient(circle at 76% 82%, rgba(195, 224, 255, 0.66), transparent 34%),
+        linear-gradient(135deg, #fffaf8 0%, #fffdf8 42%, #f7f8ff 100%);
+      background-size: 120% 120%, 125% 125%, 130% 130%, 100% 100%;
+      color: var(--ink);
+      font-family: "IBM Plex Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
+      overflow: hidden;
+    }
+
+    body {
+      min-height: 100vh;
+      position: relative;
+      animation: ambientWash 18s ease-in-out infinite alternate;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -12%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(30px);
+      opacity: 0.72;
+      mix-blend-mode: screen;
+    }
+
+    body::before {
+      background:
+        radial-gradient(circle at 20% 30%, rgba(255, 210, 220, 0.55), transparent 32%),
+        radial-gradient(circle at 72% 24%, rgba(255, 234, 170, 0.5), transparent 30%);
+      animation: driftGlow 22s ease-in-out infinite alternate;
+    }
+
+    body::after {
+      background:
+        radial-gradient(circle at 72% 72%, rgba(190, 220, 255, 0.42), transparent 34%),
+        radial-gradient(circle at 42% 80%, rgba(255, 238, 205, 0.32), transparent 28%);
+      animation: driftGlowReverse 26s ease-in-out infinite alternate;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(320px, 40vw) 1fr;
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel {
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .panel--controls {
+      border-right: 1px solid var(--line);
+      padding: 42px 34px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 36px;
+      box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.28);
+    }
+
+    .identity {
+      display: grid;
+      gap: 8px;
+    }
+
+    .identity__eyebrow {
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .identity h1,
+    .identity h2,
+    .identity p,
+    .metric__label,
+    .metric__value,
+    .footer-note {
+      margin: 0;
+      font-weight: 300;
+    }
+
+    .identity h1 {
+      font-size: clamp(2rem, 3.8vw, 3.35rem);
+      line-height: 0.94;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+
+    .identity h2 {
+      font-size: 0.88rem;
+      line-height: 1.8;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .metrics {
+      display: grid;
+      gap: 28px;
+      margin-top: auto;
+    }
+
+    .metric {
+      display: grid;
+      gap: 10px;
+    }
+
+    .metric__header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .metric__label {
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric__value {
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      min-width: 4ch;
+      text-align: right;
+    }
+
+    .metric input[type="range"] {
+      width: 100%;
+      margin: 0;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .metric input[type="range"]:focus {
+      outline: none;
+    }
+
+    .metric input[type="range"]::-webkit-slider-runnable-track {
+      height: 1px;
+      background: var(--track);
+      border-radius: 999px;
+    }
+
+    .metric input[type="range"]::-moz-range-track {
+      height: 1px;
+      background: var(--track);
+      border: 0;
+      border-radius: 999px;
+    }
+
+    .metric input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid var(--thumb);
+      background: #ffffff;
+      margin-top: -4.5px;
+    }
+
+    .metric input[type="range"]::-moz-range-thumb {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid var(--thumb);
+      background: #ffffff;
+    }
+
+    .presets {
+      display: grid;
+      gap: 14px;
+      padding: 18px 0 2px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .presets__header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .presets__title,
+    .presets__hint {
+      margin: 0;
+      font-weight: 300;
+    }
+
+    .presets__title {
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .presets__hint {
+      font-size: 0.66rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .preset-button {
+      border: 1px solid rgba(66, 47, 63, 0.14);
+      background: rgba(255, 255, 255, 0.54);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .preset-button:hover {
+      background: rgba(255, 255, 255, 0.78);
+      border-color: rgba(66, 47, 63, 0.22);
+      transform: translateY(-1px);
+    }
+
+    .preset-button.is-active {
+      background: rgba(66, 47, 63, 0.92);
+      color: #fffdfc;
+      border-color: rgba(66, 47, 63, 0.92);
+      box-shadow: 0 10px 24px rgba(66, 47, 63, 0.16);
+    }
+
+    .preset-button:focus-visible {
+      outline: 2px solid rgba(66, 47, 63, 0.26);
+      outline-offset: 2px;
+    }
+
+    .footer-note {
+      font-size: 0.68rem;
+      line-height: 1.9;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-top: 8px;
+    }
+
+    .panel--visual {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 24%, rgba(255, 221, 227, 0.28), transparent 24%),
+        radial-gradient(circle at 86% 20%, rgba(255, 235, 182, 0.25), transparent 26%),
+        radial-gradient(circle at 78% 82%, rgba(194, 223, 255, 0.28), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 251, 247, 0.2));
+    }
+
+    .panel--visual::before {
+      content: "";
+      position: absolute;
+      inset: -10%;
+      background:
+        radial-gradient(circle at 24% 30%, rgba(255, 209, 220, 0.16), transparent 24%),
+        radial-gradient(circle at 68% 62%, rgba(188, 218, 255, 0.14), transparent 26%),
+        radial-gradient(circle at 80% 28%, rgba(255, 236, 190, 0.14), transparent 24%);
+      filter: blur(18px);
+      animation: visualPulse 16s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .visual-shell {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    #scene {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .scene-label {
+      fill: rgba(66, 47, 63, 0.5);
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+    }
+
+    .grid-line {
+      stroke: rgba(108, 88, 106, 0.24);
+      stroke-width: .5;
+      fill: none;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .grid-line--outer {
+      stroke-width: 1.08;
+    }
+
+    .support-line {
+      stroke: rgba(66, 47, 63, 0.2);
+      stroke-width: 0.2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .particle {
+      fill: var(--particle);
+      stroke: var(--particle-stroke);
+      stroke-width: 0.7;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .anchor {
+      fill: rgba(66, 47, 63, 0.74);
+      opacity: 0.75;
+    }
+
+    .ambient-ring {
+      fill: none;
+      stroke: rgba(66, 47, 63, 0.06);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+
+    @keyframes ambientWash {
+      0% {
+        background-position: 0% 0%, 100% 0%, 100% 100%, 50% 50%;
+      }
+      100% {
+        background-position: 8% 6%, 92% 12%, 84% 94%, 50% 50%;
+      }
+    }
+
+    @keyframes driftGlow {
+      0% {
+        transform: translate3d(-2%, -1%, 0) scale(1);
+      }
+      100% {
+        transform: translate3d(3%, 2%, 0) scale(1.06);
+      }
+    }
+
+    @keyframes driftGlowReverse {
+      0% {
+        transform: translate3d(2%, 1%, 0) scale(1.02);
+      }
+      100% {
+        transform: translate3d(-3%, -2%, 0) scale(1.08);
+      }
+    }
+
+    @keyframes visualPulse {
+      0% {
+        transform: scale(1) translate3d(0, 0, 0);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(1.04) translate3d(1.5%, -1%, 0);
+        opacity: 0.82;
+      }
+    }
+
+    @media (max-width: 980px) {
+      html,
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+
+      .panel--controls {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        min-height: 48vh;
+      }
+
+      .panel--visual {
+        min-height: 52vh;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .panel--controls {
+        padding: 28px 22px 24px;
+      }
+
+      .metrics {
+        gap: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel panel--controls" aria-label="Motion controls">
+      <header class="identity">
+        <p class="identity__eyebrow">Atmospheric Installation Interface</p>
+        <h1>AIRSCAPE</h1>
+        <h2>Motion Mapping Engine</h2>
+      </header>
+
+      <section class="metrics" id="controls"></section>
+
+      <section class="presets" aria-label="Motion presets">
+        <div class="presets__header">
+          <p class="presets__title">Motion Presets</p>
+          <p class="presets__hint">7 modes</p>
+        </div>
+        <div class="preset-grid" id="presetGrid"></div>
+      </section>
+
+      <p class="footer-note">
+        64 suspended particles across an isometric 9 × 9 ceiling field.<br />
+        Responsive atmospheric simulation driven by local interference, drag, and density.
+      </p>
+    </section>
+
+    <section class="panel panel--visual" aria-label="Realtime motion mapping field">
+      <div class="visual-shell">
+        <svg id="scene" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Air particle field visualization">
+          <defs>
+            <filter id="soften">
+              <feGaussianBlur stdDeviation="0.35" />
+            </filter>
+          </defs>
+          <g id="sceneRoot"></g>
+        </svg>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const GRID_POINTS = 9;
+    const PARTICLE_POINTS = 8;
+    const VIEWBOX = { width: 1000, height: 760 };
+
+    const parameters = [
+      { key: 'windSpeed', label: 'Wind Speed', min: 0, max: 100, step: 1, value: 38 },
+      { key: 'waveAmplitude', label: 'Wave Amplitude', min: 0, max: 100, step: 1, value: 44 },
+      { key: 'turbulence', label: 'Turbulence', min: 0, max: 100, step: 1, value: 26 },
+      { key: 'waveComplexity', label: 'Wave Complexity', min: 0, max: 100, step: 1, value: 54 },
+      { key: 'pollutionDensity', label: 'Pollution Density', min: 0, max: 100, step: 1, value: 31 }
+    ];
+
+    const presets = [
+      {
+        id: 'radial-wave',
+        label: 'Radial Wave',
+        params: { windSpeed: 38, waveAmplitude: 44, turbulence: 26, waveComplexity: 54, pollutionDensity: 31 },
+        mix: { radial: 0.58, directional: 0.3, cross: 0.12, spiral: 0, pulse: 0, diagonal: 0, tidal: 0, orbit: 0 }
+      },
+      {
+        id: 'directional-wave',
+        label: 'Directional Wave',
+        params: { windSpeed: 46, waveAmplitude: 42, turbulence: 18, waveComplexity: 48, pollutionDensity: 24 },
+        mix: { radial: 0.14, directional: 0.62, cross: 0.14, spiral: 0, pulse: 0, diagonal: 0.1, tidal: 0, orbit: 0 }
+      },
+      {
+        id: 'convergence',
+        label: 'Convergence',
+        params: { windSpeed: 34, waveAmplitude: 40, turbulence: 14, waveComplexity: 58, pollutionDensity: 36 },
+        mix: { radial: 0.44, directional: 0.12, cross: 0.08, spiral: 0.24, pulse: 0.12, diagonal: 0, tidal: 0, orbit: 0 }
+      },
+      {
+        id: 'tidal-sweep',
+        label: 'Tidal Sweep',
+        params: { windSpeed: 52, waveAmplitude: 50, turbulence: 16, waveComplexity: 46, pollutionDensity: 22 },
+        mix: { radial: 0.08, directional: 0.26, cross: 0.1, spiral: 0, pulse: 0, diagonal: 0.16, tidal: 0.4, orbit: 0 }
+      },
+      {
+        id: 'spiral-drift',
+        label: 'Spiral Drift',
+        params: { windSpeed: 36, waveAmplitude: 38, turbulence: 24, waveComplexity: 68, pollutionDensity: 28 },
+        mix: { radial: 0.18, directional: 0.08, cross: 0.1, spiral: 0.46, pulse: 0, diagonal: 0, tidal: 0, orbit: 0.18 }
+      },
+      {
+        id: 'breathing-field',
+        label: 'Breathing Field',
+        params: { windSpeed: 28, waveAmplitude: 48, turbulence: 10, waveComplexity: 38, pollutionDensity: 34 },
+        mix: { radial: 0.4, directional: 0, cross: 0.08, spiral: 0, pulse: 0.42, diagonal: 0, tidal: 0, orbit: 0.1 }
+      },
+      {
+        id: 'diagonal-ribbon',
+        label: 'Diagonal Ribbon',
+        params: { windSpeed: 44, waveAmplitude: 41, turbulence: 20, waveComplexity: 52, pollutionDensity: 26 },
+        mix: { radial: 0.1, directional: 0.18, cross: 0.12, spiral: 0, pulse: 0, diagonal: 0.46, tidal: 0, orbit: 0.14 }
+      }
+    ];
+
+    const state = {
+      params: Object.fromEntries(parameters.map((item) => [item.key, item.value])),
+      activePresetId: 'radial-wave',
+      presetMix: presets[0].mix,
+      particles: [],
+      anchors: [],
+      frame: null,
+      lastTime: performance.now(),
+      time: 0,
+      scene: {
+        centerX: 540,
+        centerY: -56,
+        spacingX: 43,
+        spacingY: 25,
+        baseLine: 432
+      },
+      nodes: {
+        grid: null,
+        supports: null,
+        particles: null,
+        accents: null,
+        label: null
+      }
+    };
+
+    const controlsRoot = document.getElementById('controls');
+    const presetGrid = document.getElementById('presetGrid');
+    const sceneRoot = document.getElementById('sceneRoot');
+
+    function mapRange(value, inMin, inMax, outMin, outMax) {
+      return outMin + ((value - inMin) / (inMax - inMin)) * (outMax - outMin);
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function smoothstep(edge0, edge1, x) {
+      const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    function pseudoNoise(x, y, z) {
+      return (
+        Math.sin(x * 1.73 + z * 0.53) * 0.48 +
+        Math.sin(y * 1.11 - z * 0.41) * 0.32 +
+        Math.sin((x + y) * 0.37 + z * 0.21) * 0.2
+      );
+    }
+
+    function fieldInterference(row, col, time, complexity) {
+      const c = mapRange(complexity, 0, 100, 0.6, 2.4);
+      const a = Math.sin(row * 0.72 + time * 0.55 * c);
+      const b = Math.cos(col * 0.63 - time * 0.41 * (0.8 + c * 0.2));
+      const d = Math.sin((row + col) * 0.36 - time * 0.23 * c);
+      const e = Math.cos((row - col) * 0.48 + time * 0.31 * (1 + c));
+      return a * 0.34 + b * 0.26 + d * 0.22 + e * 0.18;
+    }
+
+    function radialWave(row, col, time, speed) {
+      const center = (PARTICLE_POINTS - 1) / 2;
+      const dx = col - center;
+      const dy = row - center;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return Math.sin(distance * 1.18 - time * speed * 2.2);
+    }
+
+    function directionalWave(row, col, time, speed) {
+      return Math.sin((row + col) * 0.58 - time * speed * 1.7);
+    }
+
+    function crossWave(row, col, time, speed) {
+      return Math.cos((col - row) * 0.72 - time * speed * 1.28);
+    }
+
+    function spiralWave(row, col, time, speed) {
+      const center = (PARTICLE_POINTS - 1) / 2;
+      const dx = col - center;
+      const dy = row - center;
+      const angle = Math.atan2(dy, dx);
+      const radius = Math.sqrt(dx * dx + dy * dy);
+      return Math.sin(angle * 2.2 + radius * 0.9 - time * speed * 1.6);
+    }
+
+    function pulseWave(row, col, time, speed) {
+      const center = (PARTICLE_POINTS - 1) / 2;
+      const dx = col - center;
+      const dy = row - center;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return Math.cos(distance * 0.9 - time * speed * 1.45);
+    }
+
+    function diagonalWave(row, col, time, speed) {
+      return Math.sin((row * 0.86 - col * 0.44) - time * speed * 1.54);
+    }
+
+    function tidalWave(row, col, time, speed) {
+      return Math.sin(col * 0.78 - time * speed * 1.18) + Math.cos(row * 0.42 - time * speed * 0.72);
+    }
+
+    function orbitWave(row, col, time, speed) {
+      const center = (PARTICLE_POINTS - 1) / 2;
+      const dx = col - center;
+      const dy = row - center;
+      const angle = Math.atan2(dy, dx);
+      return Math.cos(angle - time * speed * 1.1);
+    }
+
+    function densityWeight(row, col) {
+      const center = (PARTICLE_POINTS - 1) / 2;
+      const dx = row - center;
+      const dy = col - center;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return 1 - clamp(distance / 5.4, 0, 1);
+    }
+
+    function buildControls() {
+      parameters.forEach((parameter) => {
+        const wrapper = document.createElement('label');
+        wrapper.className = 'metric';
+
+        const header = document.createElement('div');
+        header.className = 'metric__header';
+
+        const label = document.createElement('span');
+        label.className = 'metric__label';
+        label.textContent = parameter.label;
+
+        const value = document.createElement('span');
+        value.className = 'metric__value';
+        value.id = `value-${parameter.key}`;
+        value.textContent = String(parameter.value).padStart(2, '0');
+
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.min = parameter.min;
+        input.max = parameter.max;
+        input.step = parameter.step;
+        input.value = parameter.value;
+        input.name = parameter.key;
+        input.setAttribute('aria-label', parameter.label);
+
+        input.addEventListener('input', (event) => {
+          const nextValue = Number(event.target.value);
+          state.params[parameter.key] = nextValue;
+          state.activePresetId = null;
+          value.textContent = String(nextValue).padStart(2, '0');
+          updatePresetButtons();
+        });
+
+        header.append(label, value);
+        wrapper.append(header, input);
+        controlsRoot.appendChild(wrapper);
+      });
+    }
+
+    function updateControlValues() {
+      parameters.forEach((parameter) => {
+        const input = controlsRoot.querySelector(`input[name="${parameter.key}"]`);
+        const value = document.getElementById(`value-${parameter.key}`);
+        if (input) input.value = state.params[parameter.key];
+        if (value) value.textContent = String(state.params[parameter.key]).padStart(2, '0');
+      });
+    }
+
+    function updatePresetButtons() {
+      presetGrid.querySelectorAll('.preset-button').forEach((button) => {
+        button.classList.toggle('is-active', button.dataset.presetId === state.activePresetId);
+      });
+    }
+
+    function applyPreset(preset) {
+      state.activePresetId = preset.id;
+      state.presetMix = { ...preset.mix };
+      state.params = { ...state.params, ...preset.params };
+      updateControlValues();
+      updatePresetButtons();
+    }
+
+    function buildPresets() {
+      presets.forEach((preset) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'preset-button';
+        button.dataset.presetId = preset.id;
+        button.textContent = preset.label;
+        button.addEventListener('click', () => applyPreset(preset));
+        presetGrid.appendChild(button);
+      });
+
+      updatePresetButtons();
+    }
+
+    function projectPoint(row, col) {
+      const { centerX, centerY, spacingX, spacingY } = state.scene;
+      const x = centerX + (col - row) * spacingX;
+      const y = centerY + (col + row) * spacingY;
+      return { x, y };
+    }
+
+    function setupGrid() {
+      sceneRoot.innerHTML = '';
+
+      const accents = document.createElementNS(SVG_NS, 'g');
+      const gridLayer = document.createElementNS(SVG_NS, 'g');
+      const supportsLayer = document.createElementNS(SVG_NS, 'g');
+      const particlesLayer = document.createElementNS(SVG_NS, 'g');
+      const labelLayer = document.createElementNS(SVG_NS, 'g');
+
+      state.anchors = [];
+
+      for (let row = 0; row < GRID_POINTS; row += 1) {
+        const start = projectPoint(row, 0);
+        const end = projectPoint(row, GRID_POINTS - 1);
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', start.x);
+        line.setAttribute('y1', start.y);
+        line.setAttribute('x2', end.x);
+        line.setAttribute('y2', end.y);
+        line.setAttribute('class', row === 0 || row === GRID_POINTS - 1 ? 'grid-line grid-line--outer' : 'grid-line');
+        gridLayer.appendChild(line);
+      }
+
+      for (let col = 0; col < GRID_POINTS; col += 1) {
+        const start = projectPoint(0, col);
+        const end = projectPoint(GRID_POINTS - 1, col);
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', start.x);
+        line.setAttribute('y1', start.y);
+        line.setAttribute('x2', end.x);
+        line.setAttribute('y2', end.y);
+        line.setAttribute('class', col === 0 || col === GRID_POINTS - 1 ? 'grid-line grid-line--outer' : 'grid-line');
+        gridLayer.appendChild(line);
+      }
+
+      for (let row = 0; row < PARTICLE_POINTS; row += 1) {
+        for (let col = 0; col < PARTICLE_POINTS; col += 1) {
+          const anchor = projectPoint(row + 0.5, col + 0.5);
+          const dot = document.createElementNS(SVG_NS, 'circle');
+          dot.setAttribute('class', 'anchor');
+          dot.setAttribute('cx', anchor.x);
+          dot.setAttribute('cy', anchor.y);
+          dot.setAttribute('r', '1.45');
+          gridLayer.appendChild(dot);
+          state.anchors.push(anchor);
+        }
+      }
+
+      const label = document.createElementNS(SVG_NS, 'text');
+      label.setAttribute('class', 'scene-label');
+      label.setAttribute('x', '112');
+      label.setAttribute('y', '850');
+      label.textContent = 'Suspended Atmospheric Motion Field / 8×8 Active Particles';
+      labelLayer.appendChild(label);
+
+      sceneRoot.append(accents, gridLayer, supportsLayer, particlesLayer, labelLayer);
+
+      state.nodes.grid = gridLayer;
+      state.nodes.supports = supportsLayer;
+      state.nodes.particles = particlesLayer;
+      state.nodes.accents = accents;
+      state.nodes.label = labelLayer;
+    }
+
+    function createParticles() {
+      state.particles = [];
+      state.nodes.supports.innerHTML = '';
+      state.nodes.particles.innerHTML = '';
+
+      for (let row = 0; row < PARTICLE_POINTS; row += 1) {
+        for (let col = 0; col < PARTICLE_POINTS; col += 1) {
+          const id = row * PARTICLE_POINTS + col;
+          const anchor = projectPoint(row + 0.5, col + 0.5);
+
+          const support = document.createElementNS(SVG_NS, 'line');
+          support.setAttribute('class', 'support-line');
+          support.setAttribute('x1', anchor.x);
+          support.setAttribute('y1', anchor.y);
+          support.setAttribute('x2', anchor.x);
+          support.setAttribute('y2', anchor.y + state.scene.baseLine);
+
+          const particle = document.createElementNS(SVG_NS, 'circle');
+          particle.setAttribute('class', 'particle');
+          particle.setAttribute('r', '8');
+          particle.setAttribute('cx', anchor.x);
+          particle.setAttribute('cy', anchor.y + state.scene.baseLine);
+
+          state.nodes.supports.appendChild(support);
+          state.nodes.particles.appendChild(particle);
+
+          state.particles.push({
+            id,
+            row,
+            col,
+            anchorX: anchor.x,
+            anchorY: anchor.y,
+            support,
+            particle,
+            amplitudeBias: 0.94 + Math.random() * 0.16,
+            turbulenceBias: 0.35 + Math.random() * 0.45,
+            phaseOffset: (Math.random() - 0.5) * 0.28,
+            velocity: 0,
+            targetHeight: state.scene.baseLine,
+            currentHeight: state.scene.baseLine,
+            density: densityWeight(row, col),
+            localBias: Math.random() * 2 - 1
+          });
+        }
+      }
+    }
+
+    function updateSimulation(now) {
+      const dt = Math.min(0.033, (now - state.lastTime) / 1000 || 0.016);
+      state.lastTime = now;
+      state.time += dt;
+
+      const windSpeed = state.params.windSpeed;
+      const waveAmplitude = state.params.waveAmplitude;
+      const turbulence = state.params.turbulence;
+      const waveComplexity = state.params.waveComplexity;
+      const pollutionDensity = state.params.pollutionDensity;
+
+      const flowSpeed = mapRange(windSpeed, 0, 100, 0.22, 2.15);
+      const oscillationResponse = mapRange(windSpeed, 0, 100, 2.4, 8.2);
+      const displacementRange = mapRange(waveAmplitude, 0, 100, 12, 62);
+      const turbulenceStrength = mapRange(turbulence, 0, 100, 0.08, 8.5);
+      const turbulenceJitter = mapRange(turbulence, 0, 100, 0.01, 0.42);
+      const complexityStrength = mapRange(waveComplexity, 0, 100, 0.12, 1.1);
+      const phaseSpread = mapRange(waveComplexity, 0, 100, 0.08, 0.42);
+      const densitySink = mapRange(pollutionDensity, 0, 100, 0, 30);
+      const densityDamping = mapRange(pollutionDensity, 0, 100, 0.976, 0.908);
+      const densityResponsiveness = mapRange(pollutionDensity, 0, 100, 0.98, 0.46);
+      const densityClustering = mapRange(pollutionDensity, 0, 100, 0.1, 1.12);
+
+      for (const particle of state.particles) {
+        const baseRadialWave = radialWave(particle.row, particle.col, state.time + particle.phaseOffset, flowSpeed);
+        const baseDirectionalWave = directionalWave(particle.row, particle.col, state.time, flowSpeed);
+        const baseCrossWave = crossWave(particle.row, particle.col, state.time, flowSpeed);
+        const baseSpiralWave = spiralWave(particle.row, particle.col, state.time, flowSpeed);
+        const basePulseWave = pulseWave(particle.row, particle.col, state.time, flowSpeed);
+        const baseDiagonalWave = diagonalWave(particle.row, particle.col, state.time, flowSpeed);
+        const baseTidalWave = tidalWave(particle.row, particle.col, state.time, flowSpeed);
+        const baseOrbitWave = orbitWave(particle.row, particle.col, state.time, flowSpeed);
+
+        const { radial, directional, cross, spiral, pulse, diagonal, tidal, orbit } = state.presetMix;
+        const primaryWave =
+          baseRadialWave * radial +
+          baseDirectionalWave * directional +
+          baseCrossWave * cross +
+          baseSpiralWave * spiral +
+          basePulseWave * pulse +
+          baseDiagonalWave * diagonal +
+          baseTidalWave * tidal * 0.5 +
+          baseOrbitWave * orbit;
+        const secondaryWave = Math.sin(
+          (particle.row + particle.col) * 0.34 +
+          particle.phaseOffset * 3 +
+          state.time * flowSpeed * (0.92 + phaseSpread)
+        );
+        const tertiaryWave = Math.cos(
+          (particle.col - particle.row) * (0.42 + phaseSpread) -
+          state.time * flowSpeed * 0.74
+        );
+
+        const complexityField = fieldInterference(particle.row, particle.col, state.time, waveComplexity) * complexityStrength;
+        const turbulenceField = pseudoNoise(
+          particle.row * 0.82 + particle.phaseOffset * 5,
+          particle.col * 0.76 - particle.phaseOffset * 5,
+          state.time * flowSpeed * 1.12
+        ) * turbulenceStrength * particle.turbulenceBias;
+        const microJitter = Math.sin(state.time * (7 + particle.turbulenceBias * 8) + particle.phaseOffset * 11) * turbulenceJitter;
+
+        const structuredWave = primaryWave + (secondaryWave * 0.18 + tertiaryWave * 0.12 + complexityField * 0.16) * phaseSpread;
+        const motionSignal = structuredWave * displacementRange * particle.amplitudeBias;
+
+        const clusterWeight = Math.pow(particle.density, 1.35) * densityClustering;
+        const settlingOffset = clusterWeight * densitySink + mapRange(particle.localBias, -1, 1, -1.8, 1.8);
+        const liftResponse = 0.38 + (1 - clusterWeight * 0.34) * densityResponsiveness;
+
+        const targetHeight = state.scene.baseLine + settlingOffset - motionSignal * liftResponse + turbulenceField + microJitter;
+
+        particle.targetHeight = clamp(targetHeight, Math.max(84, state.scene.baseLine - 108), state.scene.baseLine + 98);
+        particle.velocity += (particle.targetHeight - particle.currentHeight) * dt * oscillationResponse;
+        particle.velocity *= densityDamping;
+        particle.currentHeight += particle.velocity;
+
+        const cx = particle.anchorX;
+        const cy = particle.anchorY + particle.currentHeight;
+        const opacity = mapRange(pollutionDensity, 0, 100, 0.24, 0.54) + particle.density * 0.12;
+
+        particle.support.setAttribute('x1', cx);
+        particle.support.setAttribute('y1', particle.anchorY);
+        particle.support.setAttribute('x2', cx);
+        particle.support.setAttribute('y2', cy);
+        particle.support.setAttribute('stroke-opacity', String(0.16 + particle.density * 0.18));
+
+        particle.particle.setAttribute('cx', cx);
+        particle.particle.setAttribute('cy', cy);
+        particle.particle.setAttribute('fill-opacity', String(clamp(opacity, 0.2, 0.68)));
+      }
+
+      renderScene();
+      state.frame = requestAnimationFrame(updateSimulation);
+    }
+
+    function renderScene() {
+      const sorted = [...state.particles].sort((a, b) => (a.anchorY + a.currentHeight) - (b.anchorY + b.currentHeight));
+      for (const particle of sorted) {
+        state.nodes.supports.appendChild(particle.support);
+        state.nodes.particles.appendChild(particle.particle);
+      }
+    }
+
+    function init() {
+      buildControls();
+      buildPresets();
+      setupGrid();
+      createParticles();
+      state.lastTime = performance.now();
+      state.frame = requestAnimationFrame(updateSimulation);
+    }
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth < 980) {
+        state.scene.centerX = VIEWBOX.width / 2;
+        state.scene.centerY = 56;
+      } else {
+        state.scene.centerX = 540;
+        state.scene.centerY = -56;
+      }
+      setupGrid();
+      createParticles();
+    });
+
+    init();
+  </script>
+</body>
+</html>
+
